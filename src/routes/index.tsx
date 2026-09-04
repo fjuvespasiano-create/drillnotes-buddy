@@ -254,10 +254,11 @@ function App() {
             className="h-9 w-auto shrink-0 brightness-0 invert"
           />
           <div className="min-w-0 flex-1">
-            <p className="text-xs uppercase tracking-widest opacity-80">
+            <h1 className="truncate text-xs uppercase tracking-widest opacity-80">
               Pré-emissão NF / CTe
-            </p>
+            </h1>
           </div>
+
           <Link
             to="/arquivos"
             className="flex items-center gap-1.5 rounded-full bg-primary-foreground/15 px-2.5 py-1 text-[11px] font-semibold uppercase"
