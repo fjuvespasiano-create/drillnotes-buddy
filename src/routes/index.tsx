@@ -1,20 +1,21 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Camera,
   Check,
   ClipboardCopy,
   CloudOff,
+  FolderOpen,
   Loader2,
   Plus,
   RefreshCw,
   Send,
   Trash2,
-  Truck,
   Wifi,
   FileText,
   Share2,
 } from "lucide-react";
+import logo from "@/assets/drilling-logo.png";
 import {
   ORIGENS,
   TIPOS_OPERACAO,
@@ -31,8 +32,12 @@ import {
   type ItemCarga,
 } from "@/lib/fiscal";
 import { baixarPdf, compartilharPdf } from "@/lib/pdf";
+import { lerArquivo, salvarArquivo } from "@/lib/arquivos";
 
 export const Route = createFileRoute("/")({
+  validateSearch: (search: Record<string, unknown>): { arquivo?: string } => ({
+    arquivo: typeof search["arquivo"] === "string" ? search["arquivo"] : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "Drilling Fiscal | Pré-emissão de NF e CTe" },
@@ -49,17 +54,20 @@ export const Route = createFileRoute("/")({
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "theme-color", content: "#17457f" },
+      { name: "theme-color", content: "#046bd2" },
     ],
     links: [{ rel: "manifest", href: "/manifest.json" }],
   }),
   component: App,
 });
 
+
 type Etapa = "form" | "espelho" | "sucesso";
 
 function App() {
+  const { arquivo } = Route.useSearch();
   const [form, setForm] = useState<FormularioFiscal>(formularioInicial);
+  const [arquivoId, setArquivoId] = useState<string | undefined>(undefined);
   const [etapa, setEtapa] = useState<Etapa>("form");
   const [cnh, setCnh] = useState<File | null>(null);
   const [foto, setFoto] = useState<File | null>(null);
@@ -71,6 +79,17 @@ function App() {
   const [pendentes, setPendentes] = useState(0);
   const [sincronizando, setSincronizando] = useState(false);
   const topo = useRef<HTMLDivElement>(null);
+
+  // Carrega um arquivo já emitido para edição (rota "/?arquivo=<id>").
+  useEffect(() => {
+    if (!arquivo) return;
+    const salvo = lerArquivo(arquivo);
+    if (!salvo) return;
+    setForm(salvo.dados);
+    setArquivoId(salvo.id);
+    setProtocolo(salvo.protocolo);
+  }, [arquivo]);
+
 
   const set = <K extends keyof FormularioFiscal>(k: K, v: FormularioFiscal[K]) =>
     setForm((f) => ({ ...f, [k]: v }));
@@ -134,6 +153,12 @@ function App() {
     setTimeout(() => setCopiado(false), 2200);
   };
 
+  /** No módulo Espelho de NF, todo item precisa de peso informado (> 0). */
+  const pesoValido = (v: string) => (parseFloat(v.replace(/\./g, "").replace(",", ".")) || 0) > 0;
+  const exigePeso = form.documento === "Espelho de Nota de Remessa";
+  const itemSemPeso = (i: ItemCarga) =>
+    exigePeso && i.descricao.trim().length > 0 && !pesoValido(i.peso);
+
   const validar = () => {
     if (form.documento === "Romaneio" && !form.romaneioNumero.trim())
       return "Informe o número do romaneio.";
@@ -141,6 +166,10 @@ function App() {
     if (!form.motoristaNome.trim()) return "Informe o nome do motorista.";
     if (!form.placaCavalo.trim()) return "Informe a placa do cavalo.";
     if (!form.itens.some((i) => i.descricao.trim())) return "Adicione ao menos um item de carga.";
+    if (exigePeso) {
+      const idx = form.itens.findIndex(itemSemPeso);
+      if (idx >= 0) return `Informe o peso (kg) do item ${idx + 1} da carga.`;
+    }
     if (form.origem === "Outro..." && !form.origemOutro.trim())
       return "Descreva a origem personalizada.";
     if (form.transporte === "Transportador Terceirizado" && !form.transportadoraRazao.trim())
@@ -148,10 +177,23 @@ function App() {
     return "";
   };
 
+  /** Salva/atualiza o arquivo no histórico local do dispositivo. */
+  const registrarArquivo = (dados: FormularioFiscal, novoProtocolo?: string) => {
+    try {
+      const salvo = salvarArquivo(dados, { id: arquivoId, protocolo: novoProtocolo ?? protocolo });
+      setArquivoId(salvo.id);
+    } catch {
+      /* histórico é opcional — nunca bloqueia o fluxo de emissão */
+    }
+  };
+
   const irParaEspelho = () => {
     const e = validar();
     setErro(e);
-    if (!e) setEtapa("espelho");
+    if (!e) {
+      registrarArquivo(form);
+      setEtapa("espelho");
+    }
   };
 
   const enviar = async () => {
@@ -163,6 +205,7 @@ function App() {
       gravarFila(fila);
       setPendentes(fila.length);
       setProtocolo("OFFLINE — na fila de envio");
+      registrarArquivo(form, "OFFLINE — na fila de envio");
       setEnviando(false);
       setEtapa("sucesso");
       return;
@@ -171,6 +214,7 @@ function App() {
       const r = await enviarPreEmissao(form, { cnh, carregamento: foto });
       if (r.ok) {
         setProtocolo(r.protocolo || "");
+        registrarArquivo(form, r.protocolo || "");
         setEtapa("sucesso");
       } else {
         setErro(r.erro || "Falha no envio.");
@@ -181,6 +225,7 @@ function App() {
       gravarFila(fila);
       setPendentes(fila.length);
       setProtocolo("OFFLINE — na fila de envio");
+      registrarArquivo(form, "OFFLINE — na fila de envio");
       setEtapa("sucesso");
     } finally {
       setEnviando(false);
@@ -189,6 +234,7 @@ function App() {
 
   const recomecar = () => {
     setForm(formularioInicial());
+    setArquivoId(undefined);
     setCnh(null);
     setFoto(null);
     setProtocolo("");
@@ -196,22 +242,30 @@ function App() {
     setEtapa("form");
   };
 
+
   return (
     <div className="min-h-screen bg-background pb-28">
       <div ref={topo} />
       <header className="sticky top-0 z-20 border-b border-primary/30 bg-primary text-primary-foreground">
         <div className="mx-auto flex max-w-3xl items-center gap-3 px-4 py-3">
-          <div className="flex size-10 items-center justify-center rounded-md bg-accent">
-            <Truck className="size-6 text-accent-foreground" />
-          </div>
+          <img
+            src={logo}
+            alt="Drilling do Brasil"
+            className="h-9 w-auto shrink-0 brightness-0 invert"
+          />
           <div className="min-w-0 flex-1">
-            <h1 className="truncate text-lg font-bold uppercase leading-none">
-              Drilling do Brasil
-            </h1>
-            <p className="text-xs uppercase tracking-widest opacity-80">
+            <h1 className="truncate text-xs uppercase tracking-widest opacity-80">
               Pré-emissão NF / CTe
-            </p>
+            </h1>
           </div>
+
+          <Link
+            to="/arquivos"
+            className="flex items-center gap-1.5 rounded-full bg-primary-foreground/15 px-2.5 py-1 text-[11px] font-semibold uppercase"
+          >
+            <FolderOpen className="size-3.5" /> Arquivos
+          </Link>
+
           <span
             className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase ${
               online ? "bg-success text-success-foreground" : "bg-warning text-warning-foreground"
@@ -495,15 +549,22 @@ function App() {
                         />
                       </div>
                       <div>
-                        <label className="field-label">Peso (kg)</label>
+                        <label className="field-label">
+                          Peso (kg){exigePeso ? " *" : ""}
+                        </label>
                         <input
-                          className="field-input"
+                          className={`field-input ${
+                            itemSemPeso(item) ? "border-destructive ring-2 ring-destructive/25" : ""
+                          }`}
                           inputMode="decimal"
+                          required={exigePeso}
+                          aria-invalid={itemSemPeso(item)}
                           value={item.peso}
                           onChange={(e) => atualizarItem(item.id, "peso", e.target.value)}
                           placeholder="0"
                         />
                       </div>
+
                       <div>
                         <label className="field-label">Valor unit. R$</label>
                         <input
