@@ -65,7 +65,9 @@ export const Route = createFileRoute("/")({
 type Etapa = "form" | "espelho" | "sucesso";
 
 function App() {
+  const { arquivo } = Route.useSearch();
   const [form, setForm] = useState<FormularioFiscal>(formularioInicial);
+  const [arquivoId, setArquivoId] = useState<string | undefined>(undefined);
   const [etapa, setEtapa] = useState<Etapa>("form");
   const [cnh, setCnh] = useState<File | null>(null);
   const [foto, setFoto] = useState<File | null>(null);
@@ -77,6 +79,17 @@ function App() {
   const [pendentes, setPendentes] = useState(0);
   const [sincronizando, setSincronizando] = useState(false);
   const topo = useRef<HTMLDivElement>(null);
+
+  // Carrega um arquivo já emitido para edição (rota "/?arquivo=<id>").
+  useEffect(() => {
+    if (!arquivo) return;
+    const salvo = lerArquivo(arquivo);
+    if (!salvo) return;
+    setForm(salvo.dados);
+    setArquivoId(salvo.id);
+    setProtocolo(salvo.protocolo);
+  }, [arquivo]);
+
 
   const set = <K extends keyof FormularioFiscal>(k: K, v: FormularioFiscal[K]) =>
     setForm((f) => ({ ...f, [k]: v }));
