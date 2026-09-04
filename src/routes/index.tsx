@@ -153,6 +153,12 @@ function App() {
     setTimeout(() => setCopiado(false), 2200);
   };
 
+  /** No módulo Espelho de NF, todo item precisa de peso informado (> 0). */
+  const pesoValido = (v: string) => (parseFloat(v.replace(/\./g, "").replace(",", ".")) || 0) > 0;
+  const exigePeso = form.documento === "Espelho de Nota de Remessa";
+  const itemSemPeso = (i: ItemCarga) =>
+    exigePeso && i.descricao.trim().length > 0 && !pesoValido(i.peso);
+
   const validar = () => {
     if (form.documento === "Romaneio" && !form.romaneioNumero.trim())
       return "Informe o número do romaneio.";
@@ -160,6 +166,10 @@ function App() {
     if (!form.motoristaNome.trim()) return "Informe o nome do motorista.";
     if (!form.placaCavalo.trim()) return "Informe a placa do cavalo.";
     if (!form.itens.some((i) => i.descricao.trim())) return "Adicione ao menos um item de carga.";
+    if (exigePeso) {
+      const idx = form.itens.findIndex(itemSemPeso);
+      if (idx >= 0) return `Informe o peso (kg) do item ${idx + 1} da carga.`;
+    }
     if (form.origem === "Outro..." && !form.origemOutro.trim())
       return "Descreva a origem personalizada.";
     if (form.transporte === "Transportador Terceirizado" && !form.transportadoraRazao.trim())
@@ -167,10 +177,23 @@ function App() {
     return "";
   };
 
+  /** Salva/atualiza o arquivo no histórico local do dispositivo. */
+  const registrarArquivo = (dados: FormularioFiscal, novoProtocolo?: string) => {
+    try {
+      const salvo = salvarArquivo(dados, { id: arquivoId, protocolo: novoProtocolo ?? protocolo });
+      setArquivoId(salvo.id);
+    } catch {
+      /* histórico é opcional — nunca bloqueia o fluxo de emissão */
+    }
+  };
+
   const irParaEspelho = () => {
     const e = validar();
     setErro(e);
-    if (!e) setEtapa("espelho");
+    if (!e) {
+      registrarArquivo(form);
+      setEtapa("espelho");
+    }
   };
 
   const enviar = async () => {
@@ -182,6 +205,7 @@ function App() {
       gravarFila(fila);
       setPendentes(fila.length);
       setProtocolo("OFFLINE — na fila de envio");
+      registrarArquivo(form, "OFFLINE — na fila de envio");
       setEnviando(false);
       setEtapa("sucesso");
       return;
@@ -190,6 +214,7 @@ function App() {
       const r = await enviarPreEmissao(form, { cnh, carregamento: foto });
       if (r.ok) {
         setProtocolo(r.protocolo || "");
+        registrarArquivo(form, r.protocolo || "");
         setEtapa("sucesso");
       } else {
         setErro(r.erro || "Falha no envio.");
@@ -200,6 +225,7 @@ function App() {
       gravarFila(fila);
       setPendentes(fila.length);
       setProtocolo("OFFLINE — na fila de envio");
+      registrarArquivo(form, "OFFLINE — na fila de envio");
       setEtapa("sucesso");
     } finally {
       setEnviando(false);
@@ -208,12 +234,14 @@ function App() {
 
   const recomecar = () => {
     setForm(formularioInicial());
+    setArquivoId(undefined);
     setCnh(null);
     setFoto(null);
     setProtocolo("");
     setErro("");
     setEtapa("form");
   };
+
 
   return (
     <div className="min-h-screen bg-background pb-28">
