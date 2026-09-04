@@ -548,15 +548,22 @@ function App() {
                         />
                       </div>
                       <div>
-                        <label className="field-label">Peso (kg)</label>
+                        <label className="field-label">
+                          Peso (kg){exigePeso ? " *" : ""}
+                        </label>
                         <input
-                          className="field-input"
+                          className={`field-input ${
+                            itemSemPeso(item) ? "border-destructive ring-2 ring-destructive/25" : ""
+                          }`}
                           inputMode="decimal"
+                          required={exigePeso}
+                          aria-invalid={itemSemPeso(item)}
                           value={item.peso}
                           onChange={(e) => atualizarItem(item.id, "peso", e.target.value)}
                           placeholder="0"
                         />
                       </div>
+
                       <div>
                         <label className="field-label">Valor unit. R$</label>
                         <input
