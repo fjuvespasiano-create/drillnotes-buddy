@@ -248,17 +248,23 @@ function App() {
       <div ref={topo} />
       <header className="sticky top-0 z-20 border-b border-primary/30 bg-primary text-primary-foreground">
         <div className="mx-auto flex max-w-3xl items-center gap-3 px-4 py-3">
-          <div className="flex size-10 items-center justify-center rounded-md bg-accent">
-            <Truck className="size-6 text-accent-foreground" />
-          </div>
+          <img
+            src={logo}
+            alt="Drilling do Brasil"
+            className="h-9 w-auto shrink-0 brightness-0 invert"
+          />
           <div className="min-w-0 flex-1">
-            <h1 className="truncate text-lg font-bold uppercase leading-none">
-              Drilling do Brasil
-            </h1>
             <p className="text-xs uppercase tracking-widest opacity-80">
               Pré-emissão NF / CTe
             </p>
           </div>
+          <Link
+            to="/arquivos"
+            className="flex items-center gap-1.5 rounded-full bg-primary-foreground/15 px-2.5 py-1 text-[11px] font-semibold uppercase"
+          >
+            <FolderOpen className="size-3.5" /> Arquivos
+          </Link>
+
           <span
             className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase ${
               online ? "bg-success text-success-foreground" : "bg-warning text-warning-foreground"
