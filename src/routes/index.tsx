@@ -1,20 +1,21 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Camera,
   Check,
   ClipboardCopy,
   CloudOff,
+  FolderOpen,
   Loader2,
   Plus,
   RefreshCw,
   Send,
   Trash2,
-  Truck,
   Wifi,
   FileText,
   Share2,
 } from "lucide-react";
+import logo from "@/assets/drilling-logo.png";
 import {
   ORIGENS,
   TIPOS_OPERACAO,
@@ -31,8 +32,12 @@ import {
   type ItemCarga,
 } from "@/lib/fiscal";
 import { baixarPdf, compartilharPdf } from "@/lib/pdf";
+import { lerArquivo, salvarArquivo } from "@/lib/arquivos";
 
 export const Route = createFileRoute("/")({
+  validateSearch: (search: Record<string, unknown>): { arquivo?: string } => ({
+    arquivo: typeof search["arquivo"] === "string" ? search["arquivo"] : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "Drilling Fiscal | Pré-emissão de NF e CTe" },
@@ -49,12 +54,13 @@ export const Route = createFileRoute("/")({
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "theme-color", content: "#17457f" },
+      { name: "theme-color", content: "#046bd2" },
     ],
     links: [{ rel: "manifest", href: "/manifest.json" }],
   }),
   component: App,
 });
+
 
 type Etapa = "form" | "espelho" | "sucesso";
 
