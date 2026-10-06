@@ -140,7 +140,7 @@ function Arquivos() {
               <span className="shrink-0 text-sm font-semibold text-primary">{moeda(a.total)}</span>
             </div>
 
-            <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-5">
               <button
                 onClick={() => baixarPdf(a.dados, a.protocolo)}
                 className="flex items-center justify-center gap-1.5 rounded-lg bg-primary px-2 py-3 text-xs font-bold uppercase text-primary-foreground"
