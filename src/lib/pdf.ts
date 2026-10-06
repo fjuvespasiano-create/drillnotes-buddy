@@ -318,3 +318,12 @@ export async function compartilharPdf(f: FormularioFiscal, protocolo?: string) {
   doc.save(nome);
   return false;
 }
+
+/** Abre o PDF em nova aba com o diálogo de impressão já acionado. */
+export function imprimirPdf(f: FormularioFiscal, protocolo?: string) {
+  const doc = gerarDocumentoPdf(f, { protocolo });
+  doc.autoPrint();
+  const url = URL.createObjectURL(doc.output("blob"));
+  const janela = window.open(url, "_blank");
+  if (!janela) doc.save(nomeArquivoPdf(f, protocolo));
+}

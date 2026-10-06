@@ -83,3 +83,19 @@ export function dataBr(iso: string): string {
   if (Number.isNaN(d.getTime())) return "-";
   return d.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
 }
+
+const CHAVE_SEQ = "drilling_seq_romaneio_v1";
+
+/** Gera o próximo número sequencial de romaneio (ex.: 2026-0001), nunca repetindo os já salvos. */
+export function proximoNumeroRomaneio(): string {
+  const ano = new Date().getFullYear();
+  const prefixo = `${ano}-`;
+  const salvo = typeof localStorage === "undefined" ? 0 : Number(localStorage.getItem(CHAVE_SEQ)) || 0;
+  const maiorExistente = lerArquivos().reduce((m, a) => {
+    const n = a.dados.romaneioNumero ?? "";
+    return n.startsWith(prefixo) ? Math.max(m, Number(n.slice(prefixo.length)) || 0) : m;
+  }, 0);
+  const proximo = Math.max(salvo, maiorExistente) + 1;
+  if (typeof localStorage !== "undefined") localStorage.setItem(CHAVE_SEQ, String(proximo));
+  return `${prefixo}${String(proximo).padStart(4, "0")}`;
+}

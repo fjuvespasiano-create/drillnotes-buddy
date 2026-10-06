@@ -53,7 +53,7 @@ export const novoItem = (): ItemCarga => ({
 });
 
 export const formularioInicial = (): FormularioFiscal => ({
-  documento: "Espelho de Nota de Remessa",
+  documento: "Romaneio",
   romaneioNumero: "",
   transporte: "Frota Própria (Drilling)",
   transportadoraRazao: "",
