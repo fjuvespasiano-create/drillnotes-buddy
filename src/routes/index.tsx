@@ -399,15 +399,18 @@ function App() {
               <div className="space-y-3">
                 <div>
                   <label className="field-label">Origem</label>
-                  <select
+                  <input
                     className="field-input"
                     value={form.origem}
                     onChange={(e) => set("origem", e.target.value)}
-                  >
+                    list="origens-sugeridas"
+                    placeholder="Digite a origem (cidade / UF)"
+                  />
+                  <datalist id="origens-sugeridas">
                     {ORIGENS.map((o) => (
-                      <option key={o}>{o}</option>
+                      <option key={o} value={o} />
                     ))}
-                  </select>
+                  </datalist>
                 </div>
                 {form.origem === "Outro..." && (
                   <input
