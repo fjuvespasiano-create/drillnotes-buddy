@@ -12,7 +12,8 @@ import {
   Send,
   Trash2,
   Wifi,
-  FileText,
+  Download,
+  Printer,
   Share2,
 } from "lucide-react";
 import logo from "@/assets/drilling-logo.png";
@@ -31,11 +32,11 @@ import {
   tituloDocumento,
   type ItemCarga,
 } from "@/lib/fiscal";
-import { baixarPdf, compartilharPdf } from "@/lib/pdf";
-import { lerArquivo, salvarArquivo } from "@/lib/arquivos";
+import { baixarPdf, compartilharPdf, imprimirPdf } from "@/lib/pdf";
+import { lerArquivo, proximoNumeroRomaneio, salvarArquivo } from "@/lib/arquivos";
 
 export const Route = createFileRoute("/")({
-  validateSearch: (search: Record<string, unknown>): { arquivo?: string } => ({
+  validateSearch: (search: Record<string, unknown>): { arquivo?: string | undefined } => ({
     arquivo: typeof search["arquivo"] === "string" ? search["arquivo"] : undefined,
   }),
   head: () => ({
@@ -85,7 +86,7 @@ function App() {
     if (!arquivo) return;
     const salvo = lerArquivo(arquivo);
     if (!salvo) return;
-    setForm(salvo.dados);
+    setForm({ ...salvo.dados, documento: "Romaneio" });
     setArquivoId(salvo.id);
     setProtocolo(salvo.protocolo);
   }, [arquivo]);
@@ -160,8 +161,6 @@ function App() {
     exigePeso && i.descricao.trim().length > 0 && !pesoValido(i.peso);
 
   const validar = () => {
-    if (form.documento === "Romaneio" && !form.romaneioNumero.trim())
-      return "Informe o número do romaneio.";
     if (!form.destinoObra.trim()) return "Informe o nome da obra de destino.";
     if (!form.motoristaNome.trim()) return "Informe o nome do motorista.";
     if (!form.placaCavalo.trim()) return "Informe a placa do cavalo.";
@@ -191,7 +190,14 @@ function App() {
     const e = validar();
     setErro(e);
     if (!e) {
-      registrarArquivo(form);
+      // Numeração sequencial atribuída apenas uma vez por romaneio.
+      const dados: FormularioFiscal = {
+        ...form,
+        documento: "Romaneio",
+        romaneioNumero: form.romaneioNumero.trim() || proximoNumeroRomaneio(),
+      };
+      setForm(dados);
+      registrarArquivo(dados);
       setEtapa("espelho");
     }
   };
@@ -255,7 +261,7 @@ function App() {
           />
           <div className="min-w-0 flex-1">
             <h1 className="truncate text-xs uppercase tracking-widest opacity-80">
-              Pré-emissão NF / CTe
+              Romaneio de Carga
             </h1>
           </div>
 
@@ -294,39 +300,13 @@ function App() {
         {etapa === "form" && (
           <>
             <section className="panel">
-              <h2 className="mb-3 text-base font-bold uppercase">1. Tipo de documento</h2>
-              <div className="grid grid-cols-2 gap-2">
-                {(["Espelho de Nota de Remessa", "Romaneio"] as const).map((op) => (
-                  <button
-                    key={op}
-                    type="button"
-                    onClick={() => set("documento", op)}
-                    className={`rounded-lg border-2 px-3 py-4 text-sm font-semibold transition-colors ${
-                      form.documento === op
-                        ? "border-primary bg-primary text-primary-foreground"
-                        : "border-border bg-secondary text-secondary-foreground"
-                    }`}
-                  >
-                    {op === "Romaneio" ? "Romaneio (sem NF)" : "Espelho de Nota de Remessa"}
-                  </button>
-                ))}
+              <h2 className="mb-3 text-base font-bold uppercase">1. Romaneio de carga</h2>
+              <div className="rounded-lg bg-muted p-3">
+                <p className="field-label">Nº do romaneio (sequencial automático)</p>
+                <p className="font-mono text-lg font-bold text-primary">
+                  {form.romaneioNumero || "Gerado ao salvar"}
+                </p>
               </div>
-              <p className="mt-2 text-xs text-muted-foreground">
-                {form.documento === "Romaneio"
-                  ? "Movimentações internas em MG/BH que não geram nota fiscal."
-                  : "Gera o espelho para o setor fiscal emitir a Nota Fiscal de remessa."}
-              </p>
-              {form.documento === "Romaneio" && (
-                <div className="mt-3 rounded-lg bg-muted p-3">
-                  <label className="field-label">Nº do romaneio</label>
-                  <input
-                    className="field-input"
-                    value={form.romaneioNumero}
-                    onChange={(e) => set("romaneioNumero", e.target.value)}
-                    placeholder="Ex.: 2026-0148"
-                  />
-                </div>
-              )}
             </section>
 
             <section className="panel">
@@ -652,13 +632,19 @@ function App() {
                 onClick={() => baixarPdf(form, protocolo)}
                 className="flex items-center justify-center gap-2 rounded-lg bg-primary py-4 text-sm font-bold uppercase text-primary-foreground"
               >
-                <FileText className="size-5" /> Gerar PDF
+                <Download className="size-5" /> Baixar PDF
               </button>
               <button
                 onClick={() => void compartilharPdf(form, protocolo)}
                 className="flex items-center justify-center gap-2 rounded-lg border-2 border-primary py-4 text-sm font-bold uppercase text-primary"
               >
                 <Share2 className="size-5" /> Compartilhar
+              </button>
+              <button
+                onClick={() => imprimirPdf(form, protocolo)}
+                className="col-span-2 flex items-center justify-center gap-2 rounded-lg border-2 border-primary py-4 text-sm font-bold uppercase text-primary"
+              >
+                <Printer className="size-5" /> Imprimir
               </button>
             </div>
             {erro && (
@@ -674,7 +660,8 @@ function App() {
             <div className="mx-auto mb-3 flex size-16 items-center justify-center rounded-full bg-success/15">
               <Check className="size-9 text-success" />
             </div>
-            <h2 className="text-xl font-bold uppercase">Pedido registrado</h2>
+            <h2 className="text-xl font-bold uppercase">Romaneio salvo</h2>
+            <p className="mt-1 font-mono text-lg font-bold text-primary">Nº {form.romaneioNumero}</p>
             <p className="mt-1 text-sm text-muted-foreground">Protocolo</p>
             <p className="mt-1 font-mono text-lg font-bold text-primary">{protocolo || "—"}</p>
             <button
@@ -689,7 +676,7 @@ function App() {
                 onClick={() => baixarPdf(form, protocolo)}
                 className="flex items-center justify-center gap-2 rounded-lg bg-primary py-4 text-sm font-bold uppercase text-primary-foreground"
               >
-                <FileText className="size-5" /> Gerar PDF
+                <Download className="size-5" /> Baixar PDF
               </button>
               <button
                 onClick={() => void compartilharPdf(form, protocolo)}
@@ -697,12 +684,18 @@ function App() {
               >
                 <Share2 className="size-5" /> Compartilhar
               </button>
+              <button
+                onClick={() => imprimirPdf(form, protocolo)}
+                className="col-span-2 flex items-center justify-center gap-2 rounded-lg border-2 border-primary py-4 text-sm font-bold uppercase text-primary"
+              >
+                <Printer className="size-5" /> Imprimir
+              </button>
             </div>
             <button
               onClick={recomecar}
               className="mt-2 w-full rounded-lg border-2 border-primary py-4 text-sm font-bold uppercase text-primary"
             >
-              Nova pré-emissão
+              Novo romaneio
             </button>
           </section>
         )}
@@ -725,7 +718,7 @@ function App() {
               className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-accent py-4 text-base font-bold uppercase text-accent-foreground disabled:opacity-60"
             >
               {enviando ? <Loader2 className="size-5 animate-spin" /> : <Send className="size-5" />}
-              {etapa === "form" ? "Revisar espelho" : "Enviar ao fiscal"}
+              {etapa === "form" ? "Revisar romaneio" : "Salvar no sistema"}
             </button>
           </div>
         </footer>

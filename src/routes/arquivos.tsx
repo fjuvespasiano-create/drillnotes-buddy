@@ -7,12 +7,14 @@ import {
   Download,
   FileText,
   Pencil,
+  Printer,
   Search,
+  Share2,
   Trash2,
 } from "lucide-react";
 import logo from "@/assets/drilling-logo.png";
 import { moeda } from "@/lib/fiscal";
-import { baixarPdf } from "@/lib/pdf";
+import { baixarPdf, compartilharPdf, imprimirPdf } from "@/lib/pdf";
 import { dataBr, excluirArquivo, lerArquivos, type ArquivoEmitido } from "@/lib/arquivos";
 
 export const Route = createFileRoute("/arquivos")({
@@ -139,7 +141,7 @@ function Arquivos() {
               <span className="shrink-0 text-sm font-semibold text-primary">{moeda(a.total)}</span>
             </div>
 
-            <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-5">
               <button
                 onClick={() => baixarPdf(a.dados, a.protocolo)}
                 className="flex items-center justify-center gap-1.5 rounded-lg bg-primary px-2 py-3 text-xs font-bold uppercase text-primary-foreground"
@@ -147,10 +149,16 @@ function Arquivos() {
                 <Download className="size-4" /> PDF
               </button>
               <button
-                onClick={() => baixarTxt(a)}
+                onClick={() => imprimirPdf(a.dados, a.protocolo)}
                 className="flex items-center justify-center gap-1.5 rounded-lg border-2 border-primary px-2 py-3 text-xs font-bold uppercase text-primary"
               >
-                <FileText className="size-4" /> TXT
+                <Printer className="size-4" /> Imprimir
+              </button>
+              <button
+                onClick={() => void compartilharPdf(a.dados, a.protocolo)}
+                className="flex items-center justify-center gap-1.5 rounded-lg border-2 border-primary px-2 py-3 text-xs font-bold uppercase text-primary"
+              >
+                <Share2 className="size-4" /> Compartilhar
               </button>
               <Link
                 to="/"
