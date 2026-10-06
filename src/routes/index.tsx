@@ -36,7 +36,7 @@ import { baixarPdf, compartilharPdf, imprimirPdf } from "@/lib/pdf";
 import { lerArquivo, proximoNumeroRomaneio, salvarArquivo } from "@/lib/arquivos";
 
 export const Route = createFileRoute("/")({
-  validateSearch: (search: Record<string, unknown>): { arquivo?: string } => ({
+  validateSearch: (search: Record<string, unknown>): { arquivo?: string | undefined } => ({
     arquivo: typeof search["arquivo"] === "string" ? search["arquivo"] : undefined,
   }),
   head: () => ({

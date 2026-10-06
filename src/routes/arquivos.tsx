@@ -5,6 +5,7 @@ import {
   Check,
   ClipboardCopy,
   Download,
+  FileText,
   Pencil,
   Printer,
   Search,

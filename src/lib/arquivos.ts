@@ -46,7 +46,7 @@ export function lerArquivo(id: string): ArquivoEmitido | undefined {
 /** Cria ou atualiza (quando `id` já existe) um arquivo e devolve o registro salvo. */
 export function salvarArquivo(
   dados: FormularioFiscal,
-  opcoes: { id?: string; protocolo?: string } = {},
+  opcoes: { id?: string | undefined; protocolo?: string | undefined } = {},
 ): ArquivoEmitido {
   const lista = lerArquivos();
   const agora = new Date().toISOString();
