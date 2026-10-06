@@ -12,7 +12,8 @@ import {
   Send,
   Trash2,
   Wifi,
-  FileText,
+  Download,
+  Printer,
   Share2,
 } from "lucide-react";
 import logo from "@/assets/drilling-logo.png";
